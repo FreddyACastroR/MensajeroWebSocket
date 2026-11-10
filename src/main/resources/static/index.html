@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensajero SD</title>
+    <link rel="stylesheet" href="css/estilos.css">
+    <!-- StompJs (copia local para que funcione aunque no haya internet en la red del salón) -->
+    <script src="js/vendor/stomp.umd.min.js"></script>
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+
+<!-- ============ Pantalla de entrada ============ -->
+<main id="pantallaEntrada" class="entrada">
+    <form id="formEntrada" class="entrada__tarjeta" autocomplete="off">
+        <div class="marca">
+            <span class="marca__logo" aria-hidden="true"></span>
+            <div>
+                <h1>Mensajero</h1>
+                <p>Sistemas Distribuidos · WebSockets + STOMP</p>
+            </div>
+        </div>
+
+        <label class="campo">
+            <span>Tu nombre</span>
+            <input id="txtNombre" type="text" maxlength="20" required placeholder="Ej. Katia">
+        </label>
+        <label class="campo">
+            <span>Servidor</span>
+            <input id="txtServidor" type="text" required placeholder="localhost:8080">
+            <small>Dirección IP y puerto de la computadora que corre el servidor.</small>
+        </label>
+
+        <p id="errorEntrada" class="entrada__error" role="alert" hidden></p>
+
+        <button id="btnEntrar" type="submit" class="boton boton--primario boton--ancho">Entrar al chat</button>
+
+        <footer class="entrada__equipo">
+            <strong>Equipo</strong>
+            Freddy Ali Castro Roman · Katia Ximena Návarez Espinoza ·
+            Jesús Rodrigo Villegas Arguelles · Ethan Gael Valdez Romero
+        </footer>
+    </form>
+</main>
+
+<!-- ============ Aplicación ============ -->
+<div id="pantallaApp" class="app" hidden>
+    <header class="barra">
+        <div class="marca marca--chica">
+            <span class="marca__logo" aria-hidden="true"></span>
+            <strong>Mensajero</strong>
+        </div>
+        <div class="barra__derecha">
+            <span id="estadoConexion" class="estado estado--en-linea">En línea</span>
+            <span class="barra__yo">Conectado como <strong id="lblYo"></strong></span>
+            <button id="btnSalir" type="button" class="boton boton--fantasma">Salir</button>
+        </div>
+    </header>
+
+    <!-- Lista de usuarios conectados -->
+    <aside class="lateral" aria-labelledby="tituloConectados">
+        <h2 id="tituloConectados" class="lateral__titulo">
+            Conectados <span id="numConectados" class="contador">0</span>
+        </h2>
+        <p class="lateral__ayuda">Elige a quién enviar. «Todos» manda un mensaje público.</p>
+        <ul id="listaUsuarios" class="usuarios"></ul>
+    </aside>
+
+    <main class="principal">
+        <div class="pestanas" role="tablist">
+            <button id="tabChat" class="pestana" role="tab" aria-selected="true" aria-controls="panelChat" data-panel="chat">
+                Chat <span id="badgeChat" class="badge" hidden>0</span>
+            </button>
+            <button id="tabAlumnos" class="pestana" role="tab" aria-selected="false" aria-controls="panelAlumnos" data-panel="alumnos">
+                Alumnos <span id="badgeAlumnos" class="badge" hidden>0</span>
+            </button>
+        </div>
+
+        <!-- Panel de chat -->
+        <section id="panelChat" class="panel panel--chat" role="tabpanel" aria-labelledby="tabChat">
+            <ol id="listaMensajes" class="mensajes" aria-live="polite"></ol>
+
+            <form id="formChat" class="redactor" autocomplete="off">
+                <label class="para">
+                    <span>Para</span>
+                    <select id="selParaChat" class="selector-para"></select>
+                </label>
+                <input id="txtMensaje" type="text" maxlength="1000" placeholder="Escribe un mensaje para todos…">
+                <button type="submit" class="boton boton--primario">Enviar</button>
+            </form>
+        </section>
+
+        <!-- Panel de alumnos (entidad que viaja en JSON) -->
+        <section id="panelAlumnos" class="panel panel--alumnos" role="tabpanel" aria-labelledby="tabAlumnos" hidden>
+            <div class="alumnos__arriba">
+                <form id="formAlumno" class="tarjeta" autocomplete="off">
+                    <div class="tarjeta__encabezado">
+                        <h2>Enviar alumno</h2>
+                        <button id="btnEjemplo" type="button" class="boton boton--enlace">Llenar con datos de ejemplo</button>
+                    </div>
+                    <div class="rejilla">
+                        <label class="campo">
+                            <span>Matrícula</span>
+                            <input id="txtMatricula" type="text" maxlength="20" required>
+                        </label>
+                        <label class="campo campo--doble">
+                            <span>Nombre completo</span>
+                            <input id="txtNombreAlumno" type="text" maxlength="80" required>
+                        </label>
+                        <label class="campo campo--doble">
+                            <span>Carrera</span>
+                            <input id="txtCarrera" type="text" maxlength="80" required list="carreras">
+                            <datalist id="carreras">
+                                <option value="Ingeniería en Software">
+                                <option value="Ingeniería en Sistemas Computacionales">
+                                <option value="Ingeniería Industrial">
+                                <option value="Ingeniería Mecatrónica">
+                                <option value="Licenciatura en Administración">
+                                <option value="Licenciatura en Diseño Gráfico">
+                            </datalist>
+                        </label>
+                        <label class="campo">
+                            <span>Semestre</span>
+                            <input id="txtSemestre" type="number" min="1" max="12" step="1" required>
+                        </label>
+                        <label class="campo">
+                            <span>Promedio (0–100)</span>
+                            <input id="txtPromedio" type="number" min="0" max="100" step="0.01" required>
+                        </label>
+                        <label class="campo">
+                            <span>Enviar a</span>
+                            <select id="selParaAlumno" class="selector-para"></select>
+                        </label>
+                    </div>
+                    <div class="tarjeta__pie">
+                        <button type="submit" class="boton boton--primario">Enviar alumno</button>
+                    </div>
+                </form>
+
+                <div class="tarjeta tarjeta--json">
+                    <h2>JSON que se enviará</h2>
+                    <pre id="jsonEnvio" class="json"></pre>
+                    <h2>Último JSON recibido</h2>
+                    <pre id="jsonRecibido" class="json">—</pre>
+                </div>
+            </div>
+
+            <div class="tarjeta tarjeta--tabla">
+                <div class="tarjeta__encabezado">
+                    <h2>Alumnos recibidos <span id="numAlumnos" class="contador">0</span></h2>
+                </div>
+                <div class="tabla-contenedor">
+                    <table class="tabla">
+                        <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Matrícula</th>
+                            <th>Nombre</th>
+                            <th>Carrera</th>
+                            <th class="num">Semestre</th>
+                            <th class="num">Promedio</th>
+                            <th>Enviado por</th>
+                            <th>Para</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tablaAlumnos">
+                        <tr class="tabla__vacia"><td colspan="8">Todavía no llega ningún alumno.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Avisos flotantes (errores que regresa el servidor, etc.) -->
+<div id="avisos" class="avisos" aria-live="assertive"></div>
+
+</body>
+</html>
